@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from dot.checks.base import Check, CheckResult
 
@@ -29,9 +29,16 @@ class FreshnessCheck(Check):
                 run_at=datetime.now(timezone.utc),
             )
 
-        # Normalize to plain Python datetime, handling both aware and naive timestamps
+        # Normalize to plain Python datetime.
+        # BQ TIMESTAMP → pandas.Timestamp → to_pydatetime()
+        # BQ DATE (db-dtypes) → datetime.date → promote to midnight datetime
+        # BQ DATE (no db-dtypes) → str like "2026-08-01" → fromisoformat()
         if hasattr(latest, "to_pydatetime"):
             latest = latest.to_pydatetime()
+        elif isinstance(latest, str):
+            latest = datetime.fromisoformat(latest)
+        elif isinstance(latest, date) and not isinstance(latest, datetime):
+            latest = datetime(latest.year, latest.month, latest.day)
 
         if latest.tzinfo is not None:
             age_seconds = (datetime.now(timezone.utc) - latest).total_seconds()

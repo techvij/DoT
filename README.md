@@ -55,8 +55,20 @@ python -m dot run --config config/checks.yaml
 
 ```bash
 pip install -r requirements.txt
-gcloud auth application-default login   # once; automatic in Cloud Shell
+gcloud auth application-default login   # once; not needed in Cloud Shell
 # Edit config/checks.yaml — see BigQuery section below
+python -m dot run --config config/checks.yaml
+```
+
+### Cloud Shell
+
+Cloud Shell's Python is OS-managed (PEP 668), so `pip install` requires the `--break-system-packages` flag:
+
+```bash
+git clone https://github.com/techvij/DoT.git && cd DoT
+pip install -r requirements.txt --break-system-packages
+# No auth needed — Cloud Shell detects GOOGLE_CLOUD_SHELL=true automatically
+# Edit config/checks.yaml with your project/dataset/tables
 python -m dot run --config config/checks.yaml
 ```
 
