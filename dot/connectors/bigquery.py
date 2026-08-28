@@ -1,5 +1,6 @@
 import logging
 import os
+import warnings
 
 import pandas as pd
 
@@ -74,7 +75,9 @@ class BigQueryConnector(BaseConnector):
         if self._client is None:
             self.connect()
         logger.debug(f"SQL:\n{sql.strip()}")
-        return self._client.query(sql).to_dataframe()
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="BigQuery Storage module not found")
+            return self._client.query(sql).to_dataframe()
 
     # --- Table resolution ---
 
