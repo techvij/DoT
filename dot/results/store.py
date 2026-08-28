@@ -94,6 +94,16 @@ class ResultsStore:
             )
             conn.commit()
 
+    def reset_row_count_baseline(self, table: str) -> int:
+        """Delete all row_count history for a table so the next run starts a fresh baseline."""
+        with sqlite3.connect(self.db_path) as conn:
+            cur = conn.execute(
+                "DELETE FROM results WHERE table_name = ? AND check_name = 'row_count'",
+                (table,),
+            )
+            conn.commit()
+            return cur.rowcount
+
     def get_snapshot(self, table: str) -> dict | None:
         with sqlite3.connect(self.db_path) as conn:
             cur = conn.execute(

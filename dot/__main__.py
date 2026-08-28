@@ -43,6 +43,12 @@ def _print_result(result, config_path: str) -> None:
             f"     python -m dot snapshot accept --table {result.table} --config {config_path}"
         )
 
+    if result.check_name == "row_count" and result.status in ("warn", "fail") and "7d avg" in result.message:
+        print(
+            f"   → If this drop is intentional (e.g. dropped partitions), reset the baseline:\n"
+            f"     python -m dot baseline reset --table {result.table} --config {config_path}"
+        )
+
 
 def _build_connector_from_cfg(cfg: dict):
     conn_cfg = cfg["connections"]["default"]
@@ -116,6 +122,31 @@ def snapshot_accept(table: str, config: str, db: str) -> None:
     print(
         f"Snapshot updated for '{table}' ({len(current)} columns). "
         f"schema_drift will pass on the next run."
+    )
+
+
+@cli.group()
+def baseline() -> None:
+    """Manage row count baselines for self-calibrating checks."""
+    pass
+
+
+@baseline.command("reset")
+@click.option("--table",  required=True,                                     help="Table whose row_count history to clear")
+@click.option("--config", default="config/checks.yaml", show_default=True, help="Path to checks YAML config (unused, kept for consistency)")
+@click.option("--db",     default="dot_results.db",     show_default=True, help="Path to SQLite results DB")
+def baseline_reset(table: str, config: str, db: str) -> None:
+    """Clear row_count history for TABLE so the next run starts a fresh baseline.
+
+    Use this after an intentional change (e.g. dropping stale partitions) that
+    permanently lowers the expected row count. The next run will pass and seed
+    a new baseline from the current count.
+    """
+    store = ResultsStore(db)
+    deleted = store.reset_row_count_baseline(table)
+    print(
+        f"Cleared {deleted} row_count history row(s) for '{table}'. "
+        f"Next run will establish a new baseline from the current count."
     )
 
 

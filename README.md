@@ -108,6 +108,9 @@ python -m dot run --config config/checks.yaml --log-dir /var/log/dot
 
 # Accept a schema change as the new baseline
 python -m dot snapshot accept --table orders --config config/checks.yaml
+
+# Reset row_count baseline after an intentional data change (e.g. dropped partitions)
+python -m dot baseline reset --table orders --config config/checks.yaml
 ```
 
 ---
