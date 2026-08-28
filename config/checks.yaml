@@ -51,13 +51,15 @@ checks:
   #   'my_dataset.orders'               → uses project from above
   #   'my-project.my_dataset.orders'    → fully self-contained
 
-  # allowed_values: fail if a column contains values outside a defined set.
-  # NULLs are ignored (use null_rate to catch those separately).
+  # allowed_values: fail if a column contains values outside a defined set,
+  # or (with require_all: true) if any listed value is absent from the data.
+  # NULLs are always ignored (use null_rate to catch those separately).
   #
   # - table: orders
   #   column: status
   #   check: allowed_values
   #   values: completed,pending,cancelled,refunded
+  #   require_all: true   # also fail if any listed value never appears in the column
   #   severity: high
 
   # Example: composite partition filter for BigQuery-style partitioned tables.
