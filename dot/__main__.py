@@ -71,6 +71,7 @@ def run(config: str, table: str | None, db: str, log_dir: str) -> None:
     """Run all configured checks and print results."""
     logger, log_file = setup_logger(log_dir=log_dir)
 
+    click.echo(f"Running DoT checks ({config})...")
     store = ResultsStore(db)
     runner = CheckRunner(config, store)
     results = runner.run(table_filter=table)
