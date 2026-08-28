@@ -37,6 +37,20 @@ checks:
     check: schema_drift
     severity: medium
 
+  # BigQuery connection example (swap out the postgres block above):
+  #
+  # connections:
+  #   default:
+  #     type: bigquery
+  #     project: my-gcp-project-id
+  #     dataset: my_dataset            # default dataset for unqualified table names
+  #     # credentials_file: /path/to/sa_key.json   # omit to use ADC (gcloud / Cloud Shell)
+  #
+  # Table names in checks can be:
+  #   'orders'                          → uses project + dataset from above
+  #   'my_dataset.orders'               → uses project from above
+  #   'my-project.my_dataset.orders'    → fully self-contained
+
   # allowed_values: fail if a column contains values outside a defined set.
   # NULLs are ignored (use null_rate to catch those separately).
   #

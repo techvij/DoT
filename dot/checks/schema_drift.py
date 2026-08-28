@@ -12,13 +12,7 @@ class SchemaDriftCheck(Check):
         table = self.config["table"]
         severity = self.config.get("severity", "medium")
 
-        sql = f"""
-            SELECT column_name, data_type
-            FROM information_schema.columns
-            WHERE table_name = '{table}'
-            ORDER BY ordinal_position
-        """
-        df = self.connector.run_query(sql)
+        df = self.connector.run_query(self.connector.schema_query(table))
         current = {row["column_name"]: row["data_type"] for _, row in df.iterrows()}
 
         if self.store is None:

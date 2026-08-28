@@ -9,9 +9,10 @@ class FreshnessCheck(Check):
         column = self.config["column"]
         max_age_hours = float(self.config.get("max_age_hours", 24))
         severity = self.config.get("severity", "medium")
+        table_ref = self.connector.resolve_table(table)
         where = self._where()
 
-        sql = f"SELECT MAX({column}) AS latest FROM {table} {where}"
+        sql = f"SELECT MAX({column}) AS latest FROM {table_ref} {where}"
         df = self.connector.run_query(sql)
         latest = df["latest"].iloc[0]
 
@@ -28,23 +29,17 @@ class FreshnessCheck(Check):
                 run_at=datetime.now(timezone.utc),
             )
 
-        # Normalize to a plain Python datetime, handling both aware and naive timestamps
+        # Normalize to plain Python datetime, handling both aware and naive timestamps
         if hasattr(latest, "to_pydatetime"):
             latest = latest.to_pydatetime()
 
-        now_utc = datetime.now(timezone.utc)
         if latest.tzinfo is not None:
-            age_seconds = (now_utc - latest).total_seconds()
+            age_seconds = (datetime.now(timezone.utc) - latest).total_seconds()
         else:
             age_seconds = (datetime.utcnow() - latest).total_seconds()
 
         age_hours = age_seconds / 3600
         status = "pass" if age_hours <= max_age_hours else "fail"
-
-        if status == "pass":
-            msg = f"last record {age_hours:.1f}h ago"
-        else:
-            msg = f"last record {age_hours:.1f}h ago, threshold {max_age_hours}h"
 
         return CheckResult(
             check_name="freshness",
@@ -54,6 +49,10 @@ class FreshnessCheck(Check):
             severity=severity,
             observed_value=f"{age_hours:.1f}h ago",
             expected_value=f"<= {max_age_hours}h old",
-            message=msg,
+            message=(
+                f"last record {age_hours:.1f}h ago"
+                if status == "pass"
+                else f"last record {age_hours:.1f}h ago, threshold {max_age_hours}h"
+            ),
             run_at=datetime.now(timezone.utc),
         )

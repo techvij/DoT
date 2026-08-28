@@ -1,4 +1,6 @@
+import logging
 import uuid
+from datetime import datetime, timezone
 
 import yaml
 
@@ -14,6 +16,8 @@ from dot.connectors.bigquery import BigQueryConnector
 from dot.connectors.postgres import PostgresConnector
 from dot.results.store import ResultsStore
 
+logger = logging.getLogger("dot")
+
 CHECK_REGISTRY = {
     "null_rate": NullRateCheck,
     "row_count": RowCountCheck,
@@ -24,12 +28,6 @@ CHECK_REGISTRY = {
     "allowed_values": AllowedValuesCheck,
 }
 
-CONNECTOR_REGISTRY = {
-    "postgres": PostgresConnector,
-    "bigquery": BigQueryConnector,
-}
-
-# Checks that receive the results store so they can read/write history or snapshots
 _STORE_AWARE = {"row_count", "schema_drift"}
 
 
@@ -43,38 +41,77 @@ class CheckRunner:
     def _build_connector(self):
         conn_cfg = self.config["connections"]["default"]
         connector_type = conn_cfg["type"]
-        cls = CONNECTOR_REGISTRY[connector_type]
         if connector_type == "postgres":
-            env_file = conn_cfg.get("env", ".env")
-            connector = cls(env_file=env_file)
+            connector = PostgresConnector(env_file=conn_cfg.get("env", ".env"))
+        elif connector_type == "bigquery":
+            connector = BigQueryConnector(conn_cfg)
         else:
-            connector = cls()
+            raise ValueError(f"Unknown connector type: '{connector_type}'")
         connector.connect()
         return connector
 
     def run(self, table_filter: str | None = None) -> list[CheckResult]:
+        run_id = str(uuid.uuid4())
+        logger.info(f"Run started — run_id: {run_id}, config: {self.config_path}")
+
         connector = self._build_connector()
         checks_config = self.config.get("checks", [])
 
         if table_filter:
             checks_config = [c for c in checks_config if c.get("table") == table_filter]
+            logger.info(f"Table filter active: {table_filter} ({len(checks_config)} checks)")
 
-        run_id = str(uuid.uuid4())
         results = []
 
         for check_conf in checks_config:
             check_name = check_conf.get("check")
+            table = check_conf.get("table")
+            column = check_conf.get("column")
+            label = f"{table}.{column}" if column else table
+
             cls = CHECK_REGISTRY.get(check_name)
             if cls is None:
+                logger.warning(f"Unknown check type '{check_name}' — skipping")
                 continue
 
-            if check_name in _STORE_AWARE:
-                check = cls(connector, check_conf, store=self.store)
-            else:
-                check = cls(connector, check_conf)
+            logger.info(f"Running {check_name} on {label}")
+            try:
+                if check_name in _STORE_AWARE:
+                    check = cls(connector, check_conf, store=self.store)
+                else:
+                    check = cls(connector, check_conf)
 
-            result = check.run()
+                result = check.run()
+                logger.info(f"[{label}] {check_name} → {result.status} ({result.message})")
+
+            except Exception as exc:
+                logger.error(
+                    f"[{label}] {check_name} → EXCEPTION: {exc}",
+                    exc_info=True,
+                )
+                result = CheckResult(
+                    check_name=check_name,
+                    table=table,
+                    column=column,
+                    status="error",
+                    severity=check_conf.get("severity", "medium"),
+                    observed_value=None,
+                    expected_value=None,
+                    message=f"{type(exc).__name__}: {exc}",
+                    run_at=datetime.now(timezone.utc),
+                )
+
             results.append(result)
 
         self.store.save(results, run_id)
+
+        passed  = sum(1 for r in results if r.status == "pass")
+        warned  = sum(1 for r in results if r.status == "warn")
+        failed  = sum(1 for r in results if r.status == "fail")
+        errored = sum(1 for r in results if r.status == "error")
+        logger.info(
+            f"Run complete — {len(results)} checks: "
+            f"{passed} passed, {warned} warned, {failed} failed, {errored} errored"
+        )
+
         return results

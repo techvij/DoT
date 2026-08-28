@@ -8,11 +8,12 @@ class DuplicateCheck(Check):
         table = self.config["table"]
         column = self.config["column"]
         severity = self.config.get("severity", "medium")
+        table_ref = self.connector.resolve_table(table)
         where = self._where()
 
         sql = f"""
             SELECT {column}, COUNT(*) AS cnt
-            FROM {table}
+            FROM {table_ref}
             {where}
             GROUP BY {column}
             HAVING COUNT(*) > 1
@@ -33,7 +34,6 @@ class DuplicateCheck(Check):
                 run_at=datetime.now(timezone.utc),
             )
 
-        # Extra rows = total duplicate occurrences minus the "first" of each group
         extra_rows = int(df["cnt"].sum()) - dup_values
         return CheckResult(
             check_name="duplicate",

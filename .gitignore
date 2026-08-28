@@ -18,6 +18,9 @@ dot_results.db
 # Secrets
 .env
 
+# Logs
+logs/
+
 # OS
 .DS_Store
 Thumbs.db

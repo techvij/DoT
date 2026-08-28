@@ -10,6 +10,7 @@ class AllowedValuesCheck(Check):
         severity = self.config.get("severity", "medium")
         raw_values = str(self.config.get("values", ""))
         allowed = [v.strip() for v in raw_values.split(",") if v.strip()]
+        table_ref = self.connector.resolve_table(table)
 
         if not allowed:
             return CheckResult(
@@ -25,15 +26,15 @@ class AllowedValuesCheck(Check):
             )
 
         not_in = ", ".join(f"'{v}'" for v in allowed)
-        # Exclude NULLs — null_rate covers those separately
-        column_filter = f"{column} IS NOT NULL AND {column}::TEXT NOT IN ({not_in})"
+        col_as_str = self.connector.cast_string(column)
+        column_filter = f"{column} IS NOT NULL AND {col_as_str} NOT IN ({not_in})"
         where = self._where(extra=column_filter)
 
         sql = f"""
-            SELECT {column}::TEXT AS val, COUNT(*) AS cnt
-            FROM {table}
+            SELECT {col_as_str} AS val, COUNT(*) AS cnt
+            FROM {table_ref}
             {where}
-            GROUP BY {column}::TEXT
+            GROUP BY {col_as_str}
             ORDER BY cnt DESC
         """
         df = self.connector.run_query(sql)

@@ -11,7 +11,7 @@ class CheckResult:
     check_name: str
     table: str
     column: str | None
-    status: Literal["pass", "warn", "fail"]
+    status: Literal["pass", "warn", "fail", "error"]
     severity: Literal["low", "medium", "high", "critical"]
     observed_value: float | str | None
     expected_value: float | str | None

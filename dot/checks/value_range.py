@@ -10,9 +10,10 @@ class ValueRangeCheck(Check):
         min_val = self.config.get("min")
         max_val = self.config.get("max")
         severity = self.config.get("severity", "medium")
+        table_ref = self.connector.resolve_table(table)
         where = self._where()
 
-        sql = f"SELECT MIN({column}) AS min_val, MAX({column}) AS max_val FROM {table} {where}"
+        sql = f"SELECT MIN({column}) AS min_val, MAX({column}) AS max_val FROM {table_ref} {where}"
         df = self.connector.run_query(sql)
         observed_min = df["min_val"].iloc[0]
         observed_max = df["max_val"].iloc[0]

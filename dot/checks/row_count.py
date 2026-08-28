@@ -12,9 +12,10 @@ class RowCountCheck(Check):
         table = self.config["table"]
         min_rows = self.config.get("min_rows")
         severity = self.config.get("severity", "medium")
+        table_ref = self.connector.resolve_table(table)
         where = self._where()
 
-        sql = f"SELECT COUNT(*) AS row_count FROM {table} {where}"
+        sql = f"SELECT COUNT(*) AS row_count FROM {table_ref} {where}"
         df = self.connector.run_query(sql)
         row_count = int(df["row_count"].iloc[0])
 
