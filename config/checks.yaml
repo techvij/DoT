@@ -1,0 +1,58 @@
+connections:
+  default:
+    type: postgres
+    env: .env
+
+checks:
+  - table: orders
+    column: status
+    check: null_rate
+    threshold: 0.01     # fail if > 1% null
+    severity: high
+
+  - table: orders
+    check: row_count
+    min_rows: 1000
+    severity: high
+
+  - table: events
+    column: created_at
+    check: freshness
+    max_age_hours: 6
+    severity: critical
+
+  - table: orders
+    column: order_id
+    check: duplicate
+    severity: high
+
+  - table: payments
+    column: amount
+    check: value_range
+    min: 0
+    max: 1000000
+    severity: high
+
+  - table: orders
+    check: schema_drift
+    severity: medium
+
+  # allowed_values: fail if a column contains values outside a defined set.
+  # NULLs are ignored (use null_rate to catch those separately).
+  #
+  # - table: orders
+  #   column: status
+  #   check: allowed_values
+  #   values: completed,pending,cancelled,refunded
+  #   severity: high
+
+  # Example: composite partition filter for BigQuery-style partitioned tables.
+  # Uncomment and adapt when targeting a partitioned table.
+  #
+  # - table: events_partitioned
+  #   column: created_at
+  #   check: freshness
+  #   max_age_hours: 6
+  #   severity: high
+  #   partition_column: year/month/date
+  #   partition_value: 2026/05/01
