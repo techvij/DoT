@@ -329,6 +329,17 @@ Every run is persisted to SQLite (`dot_results.db` by default). This powers:
 
 ---
 
+## Running tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests/ -v
+```
+
+17 tests — no database or cloud credentials required. Covers partition clause builder, connector dialect helpers, and BigQuery table resolution.
+
+---
+
 ## Adding a new connector
 
 Create a new file in `dot/connectors/` subclassing `BaseConnector`. Implement `connect()` and `run_query()`. Override `cast_float()`, `cast_string()`, `schema_query()`, and `resolve_table()` if the connector has a different SQL dialect or table-naming convention. No changes needed anywhere else.
