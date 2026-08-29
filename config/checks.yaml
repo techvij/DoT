@@ -64,9 +64,9 @@ checks:
 
   # duplicate: supports composite grain via 'columns' list (or single 'column').
   #
-  # - table: employees
+  # - table: order_items
   #   check: duplicate
-  #   columns: [employee_code, event_date, sequence_no]
+  #   columns: [order_id, product_id, line_number]
   #   severity: high
 
   # row_count with run-over-run delta: fail if count changes by > 20% from last run.
@@ -80,29 +80,29 @@ checks:
   # cardinality: COUNT(DISTINCT col) must stay within bounds.
   # Catches dimension load failures where a bad DELETE+INSERT collapses distinct values.
   #
-  # - table: employees
-  #   column: division_label
+  # - table: products
+  #   column: category
   #   check: cardinality
-  #   min_distinct: 25
-  #   max_distinct: 40
+  #   min_distinct: 5
+  #   max_distinct: 50
   #   severity: high
 
   # custom_sql: run any SQL and assert the result equals expect.
   # Use {table} as a placeholder — resolved with correct quoting per connector.
   #
-  # - table: fact_headcount
+  # - table: orders
   #   check: custom_sql
-  #   sql: "SELECT COUNT(*) FROM {table} WHERE metric_denominator IS NULL AND metric_key LIKE '%attrition%'"
+  #   sql: "SELECT COUNT(*) FROM {table} WHERE refund_amount > order_total"
   #   expect: 0
   #   severity: high
 
   # regex: all non-null values must match a pattern.
   # Uses ~ on Postgres, REGEXP_CONTAINS on BigQuery.
   #
-  # - table: employees
-  #   column: employee_code
+  # - table: users
+  #   column: email
   #   check: regex
-  #   pattern: '^EMP-\d+$'
+  #   pattern: '^[^@]+@[^@]+\.[^@]+$'
   #   severity: high
 
   # Example: composite partition filter for BigQuery-style partitioned tables.

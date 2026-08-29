@@ -190,9 +190,9 @@ NULLs are always excluded from both directions — use `null_rate` to check for 
 Pass a list to check uniqueness across multiple columns:
 
 ```yaml
-- table: employees
+- table: order_items
   check: duplicate
-  columns: [employee_code, event_date, sequence_no]
+  columns: [order_id, product_id, line_number]
   severity: high
 ```
 
@@ -214,11 +214,11 @@ Prefer this over rolling average when a backfill or partition drop makes history
 Fail when `COUNT(DISTINCT col)` falls outside a defined range. Catches silent dimension collapses:
 
 ```yaml
-- table: employees
-  column: division_label
+- table: products
+  column: category
   check: cardinality
-  min_distinct: 25
-  max_distinct: 40
+  min_distinct: 5
+  max_distinct: 50
   severity: high
 ```
 
@@ -227,9 +227,9 @@ Fail when `COUNT(DISTINCT col)` falls outside a defined range. Catches silent di
 Bring your own SQL. The query must return a single value; use `{table}` as a placeholder (resolved with correct quoting per connector):
 
 ```yaml
-- table: fact_headcount
+- table: orders
   check: custom_sql
-  sql: "SELECT COUNT(*) FROM {table} WHERE metric_denominator IS NULL AND metric_key LIKE '%attrition%'"
+  sql: "SELECT COUNT(*) FROM {table} WHERE refund_amount > order_total"
   expect: 0
   severity: high
 ```
@@ -239,10 +239,10 @@ Bring your own SQL. The query must return a single value; use `{table}` as a pla
 All non-null values must match a pattern. Uses `~` on Postgres, `REGEXP_CONTAINS` on BigQuery:
 
 ```yaml
-- table: employees
-  column: employee_code
+- table: users
+  column: email
   check: regex
-  pattern: '^EMP-\d+$'
+  pattern: '^[^@]+@[^@]+\.[^@]+$'
   severity: high
 ```
 

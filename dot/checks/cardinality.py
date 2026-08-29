@@ -7,7 +7,7 @@ class CardinalityCheck(Check):
     """
     COUNT(DISTINCT column) must stay within [min_distinct, max_distinct].
     Catches dimension load failures where a bad DELETE+INSERT silently collapses
-    the number of distinct values (e.g. division_label drops from 30 to 5).
+    the number of distinct values (e.g. a category column drops from 20 to 3).
     """
 
     def run(self) -> CheckResult:
