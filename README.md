@@ -154,12 +154,15 @@ BigQuery project IDs that contain hyphens are automatically backtick-quoted in S
 | Check | What it detects | Key config |
 |-------|----------------|------------|
 | `null_rate` | % of nulls in a column exceeds a threshold | `threshold: 0.01` |
-| `row_count` | Too few rows vs fixed minimum or self-calibrating 7-day average | `min_rows: 1000` (omit to self-calibrate) |
-| `freshness` | Most recent timestamp is older than `max_age_hours` | `max_age_hours: 6` |
+| `row_count` | Too few rows vs fixed minimum, run-over-run delta, or 7-day rolling average | `min_rows: 1000` · `max_delta_pct: 0.20` · omit both to self-calibrate |
+| `freshness` | Most recent timestamp/date is older than `max_age_hours` | `max_age_hours: 6` |
 | `schema_drift` | Columns added, removed, or type-changed vs saved baseline | — |
-| `duplicate` | Duplicate values on a column that should be unique | `column: order_id` |
+| `duplicate` | Duplicate values — single column or composite grain | `column: id` or `columns: [a, b, c]` |
 | `value_range` | Numeric column values outside a configured min/max band | `min: 0`, `max: 1000000` |
 | `allowed_values` | Column contains values not in a defined set, or expected values are absent | `values: a,b,c`, `require_all: true` |
+| `cardinality` | `COUNT(DISTINCT col)` falls outside expected bounds | `min_distinct: 25`, `max_distinct: 40` |
+| `custom_sql` | Any rule expressible in SQL — result must equal `expect` | `sql: SELECT COUNT(*) FROM {table} WHERE ...`, `expect: 0` |
+| `regex` | Non-null values that don't match a regex pattern | `pattern: '^EMP-\d+$'` |
 
 ### allowed_values — two directions
 
@@ -181,6 +184,67 @@ BigQuery project IDs that contain hyphens are automatically backtick-quoted in S
 | Column has `A,B`, list is `A,B,C` | pass | fail — `C` absent |
 
 NULLs are always excluded from both directions — use `null_rate` to check for those separately.
+
+### duplicate — composite grain
+
+Pass a list to check uniqueness across multiple columns:
+
+```yaml
+- table: employees
+  check: duplicate
+  columns: [employee_code, event_date, sequence_no]
+  severity: high
+```
+
+Single-column form (`column: order_id`) still works unchanged.
+
+### row_count — run-over-run delta
+
+Prefer this over rolling average when a backfill or partition drop makes history intentionally stale:
+
+```yaml
+- table: orders
+  check: row_count
+  max_delta_pct: 0.20   # fail if count changes by > 20% vs last run
+  severity: high
+```
+
+### cardinality
+
+Fail when `COUNT(DISTINCT col)` falls outside a defined range. Catches silent dimension collapses:
+
+```yaml
+- table: employees
+  column: division_label
+  check: cardinality
+  min_distinct: 25
+  max_distinct: 40
+  severity: high
+```
+
+### custom_sql
+
+Bring your own SQL. The query must return a single value; use `{table}` as a placeholder (resolved with correct quoting per connector):
+
+```yaml
+- table: fact_headcount
+  check: custom_sql
+  sql: "SELECT COUNT(*) FROM {table} WHERE metric_denominator IS NULL AND metric_key LIKE '%attrition%'"
+  expect: 0
+  severity: high
+```
+
+### regex
+
+All non-null values must match a pattern. Uses `~` on Postgres, `REGEXP_CONTAINS` on BigQuery:
+
+```yaml
+- table: employees
+  column: employee_code
+  check: regex
+  pattern: '^EMP-\d+$'
+  severity: high
+```
 
 ### Partition filters (multi-column)
 

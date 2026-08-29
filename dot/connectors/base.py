@@ -21,6 +21,10 @@ class BaseConnector(ABC):
     def cast_string(self, expr: str) -> str:
         return f"{expr}::TEXT"
 
+    def regex_match(self, expr: str, pattern: str) -> str:
+        """Returns a SQL boolean expression: true when expr matches pattern. Postgres default."""
+        return f"{expr} ~ '{pattern}'"
+
     def schema_query(self, table: str) -> str:
         return (
             f"SELECT column_name, data_type "

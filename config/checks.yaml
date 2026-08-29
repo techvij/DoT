@@ -62,6 +62,49 @@ checks:
   #   require_all: true   # also fail if any listed value never appears in the column
   #   severity: high
 
+  # duplicate: supports composite grain via 'columns' list (or single 'column').
+  #
+  # - table: employees
+  #   check: duplicate
+  #   columns: [employee_code, event_date, sequence_no]
+  #   severity: high
+
+  # row_count with run-over-run delta: fail if count changes by > 20% from last run.
+  # Alternative to min_rows (fixed threshold) and rolling-average self-calibration.
+  #
+  # - table: orders
+  #   check: row_count
+  #   max_delta_pct: 0.20
+  #   severity: high
+
+  # cardinality: COUNT(DISTINCT col) must stay within bounds.
+  # Catches dimension load failures where a bad DELETE+INSERT collapses distinct values.
+  #
+  # - table: employees
+  #   column: division_label
+  #   check: cardinality
+  #   min_distinct: 25
+  #   max_distinct: 40
+  #   severity: high
+
+  # custom_sql: run any SQL and assert the result equals expect.
+  # Use {table} as a placeholder — resolved with correct quoting per connector.
+  #
+  # - table: fact_headcount
+  #   check: custom_sql
+  #   sql: "SELECT COUNT(*) FROM {table} WHERE metric_denominator IS NULL AND metric_key LIKE '%attrition%'"
+  #   expect: 0
+  #   severity: high
+
+  # regex: all non-null values must match a pattern.
+  # Uses ~ on Postgres, REGEXP_CONTAINS on BigQuery.
+  #
+  # - table: employees
+  #   column: employee_code
+  #   check: regex
+  #   pattern: '^EMP-\d+$'
+  #   severity: high
+
   # Example: composite partition filter for BigQuery-style partitioned tables.
   # Uncomment and adapt when targeting a partitioned table.
   #

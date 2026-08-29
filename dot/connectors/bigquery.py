@@ -112,6 +112,9 @@ class BigQueryConnector(BaseConnector):
 
     # --- Dialect overrides ---
 
+    def regex_match(self, expr: str, pattern: str) -> str:
+        return f"REGEXP_CONTAINS({expr}, r'{pattern}')"
+
     def cast_float(self, expr: str) -> str:
         return f"CAST({expr} AS FLOAT64)"
 

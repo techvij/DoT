@@ -6,9 +6,12 @@ import yaml
 
 from dot.checks.allowed_values import AllowedValuesCheck
 from dot.checks.base import CheckResult
+from dot.checks.cardinality import CardinalityCheck
+from dot.checks.custom_sql import CustomSQLCheck
 from dot.checks.duplicate import DuplicateCheck
 from dot.checks.freshness import FreshnessCheck
 from dot.checks.null_rate import NullRateCheck
+from dot.checks.regex_check import RegexCheck
 from dot.checks.row_count import RowCountCheck
 from dot.checks.schema_drift import SchemaDriftCheck
 from dot.checks.value_range import ValueRangeCheck
@@ -19,13 +22,16 @@ from dot.results.store import ResultsStore
 logger = logging.getLogger("dot")
 
 CHECK_REGISTRY = {
-    "null_rate": NullRateCheck,
-    "row_count": RowCountCheck,
-    "freshness": FreshnessCheck,
-    "schema_drift": SchemaDriftCheck,
-    "duplicate": DuplicateCheck,
-    "value_range": ValueRangeCheck,
+    "null_rate":      NullRateCheck,
+    "row_count":      RowCountCheck,
+    "freshness":      FreshnessCheck,
+    "schema_drift":   SchemaDriftCheck,
+    "duplicate":      DuplicateCheck,
+    "value_range":    ValueRangeCheck,
     "allowed_values": AllowedValuesCheck,
+    "cardinality":    CardinalityCheck,
+    "custom_sql":     CustomSQLCheck,
+    "regex":          RegexCheck,
 }
 
 _STORE_AWARE = {"row_count", "schema_drift"}

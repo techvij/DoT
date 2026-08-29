@@ -46,6 +46,42 @@ class RowCountCheck(Check):
                     run_at=datetime.now(timezone.utc),
                 )
 
+        # Run-over-run delta: fail if count changes by more than max_delta_pct
+        max_delta_pct = self.config.get("max_delta_pct")
+        if max_delta_pct is not None and self.store is not None:
+            max_delta_pct = float(max_delta_pct)
+            history = self.store.get_history(table, "row_count", days=7)
+            if not history.empty:
+                last_count = float(history["observed_value"].iloc[0])
+                if last_count > 0:
+                    delta_pct = abs(row_count - last_count) / last_count
+                    status = "fail" if delta_pct > max_delta_pct else "pass"
+                    return CheckResult(
+                        check_name="row_count",
+                        table=table,
+                        column=None,
+                        status=status,
+                        severity=severity,
+                        observed_value=row_count,
+                        expected_value=f"delta <= {max_delta_pct:.0%}",
+                        message=(
+                            f"{row_count:,} rows ({delta_pct:+.1%} vs last run {last_count:,.0f})"
+                        ),
+                        run_at=datetime.now(timezone.utc),
+                    )
+            # No prior run to compare — pass and seed
+            return CheckResult(
+                check_name="row_count",
+                table=table,
+                column=None,
+                status="pass",
+                severity=severity,
+                observed_value=row_count,
+                expected_value=f"delta <= {max_delta_pct:.0%}",
+                message=f"{row_count:,} rows (first run — no prior count to compare)",
+                run_at=datetime.now(timezone.utc),
+            )
+
         # Self-calibrating: compare against 7-day rolling average from history
         if self.store is not None:
             history = self.store.get_history(table, "row_count", days=7)
