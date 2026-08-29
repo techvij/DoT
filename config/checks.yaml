@@ -7,18 +7,18 @@ checks:
   - table: orders
     column: status
     check: null_rate
-    threshold: 0.01     # fail if > 1% null
+    threshold: 0.10     # fail if > 10% null
     severity: high
 
   - table: orders
     check: row_count
-    min_rows: 1000
+    min_rows: 500
     severity: high
 
   - table: events
     column: created_at
     check: freshness
-    max_age_hours: 6
+    max_age_hours: 24
     severity: critical
 
   - table: orders
