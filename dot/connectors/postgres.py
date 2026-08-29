@@ -1,5 +1,6 @@
 import logging
 import os
+import warnings
 
 import pandas as pd
 import psycopg2
@@ -34,4 +35,6 @@ class PostgresConnector(BaseConnector):
         if self._conn is None or self._conn.closed:
             self.connect()
         logger.debug(f"SQL:\n{sql.strip()}")
-        return pd.read_sql_query(sql, self._conn)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="pandas only supports SQLAlchemy connectable")
+            return pd.read_sql_query(sql, self._conn)
