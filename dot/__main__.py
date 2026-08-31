@@ -1,3 +1,4 @@
+import json
 import sys
 
 import click
@@ -22,6 +23,20 @@ _SEVERITY = {
     "high":     "[HIGH]",
     "critical": "[CRITICAL]",
 }
+
+
+def _result_to_dict(result) -> dict:
+    return {
+        "check_name":      result.check_name,
+        "table":           result.table,
+        "column":          result.column,
+        "status":          result.status,
+        "severity":        result.severity,
+        "observed_value":  result.observed_value,
+        "expected_value":  result.expected_value,
+        "message":         result.message,
+        "run_at":          result.run_at.isoformat(),
+    }
 
 
 def _print_result(result, config_path: str) -> None:
@@ -73,14 +88,21 @@ def cli() -> None:
 @click.option("--table",    default=None,                                     help="Limit run to checks for this table only")
 @click.option("--db",       default="dot_results.db",     show_default=True, help="Path to SQLite results DB")
 @click.option("--log-dir",  default="logs",               show_default=True, help="Directory for log files")
-def run(config: str, table: str | None, db: str, log_dir: str) -> None:
+@click.option("--output",   default="text", type=click.Choice(["text", "json"], case_sensitive=False), show_default=True, help="Output format")
+def run(config: str, table: str | None, db: str, log_dir: str, output: str) -> None:
     """Run all configured checks and print results."""
     logger, log_file = setup_logger(log_dir=log_dir)
 
-    click.echo(f"Running DoT checks ({config})...")
+    if output != "json":
+        click.echo(f"Running DoT checks ({config})...")
+
     store = ResultsStore(db)
     runner = CheckRunner(config, store)
     results = runner.run(table_filter=table)
+
+    if output == "json":
+        print(json.dumps([_result_to_dict(r) for r in results], indent=2))
+        return
 
     for result in results:
         _print_result(result, config)
