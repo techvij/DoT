@@ -1,5 +1,7 @@
 # DoT — Data Observability Tool
 
+[![Tests](https://github.com/techvij/DoT/actions/workflows/test.yml/badge.svg)](https://github.com/techvij/DoT/actions/workflows/test.yml)
+
 DoT is not an ETL tool. It doesn't move data. It sits beside your ETL pipeline and watches what lands.
 
 ## Mental model
@@ -102,6 +104,9 @@ python -m dot run --config config/checks.yaml
 
 # Run checks for one table only
 python -m dot run --config config/checks.yaml --table orders
+
+# Output results as JSON (pipe-friendly: jq, downstream tooling)
+python -m dot run --config config/checks.yaml --output json
 
 # Custom log directory
 python -m dot run --config config/checks.yaml --log-dir /var/log/dot
@@ -336,7 +341,7 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
-17 tests — no database or cloud credentials required. Covers partition clause builder, connector dialect helpers, and BigQuery table resolution.
+56 tests — no database or cloud credentials required. Covers all 10 check types (via mock connector), partition clause builder, connector dialect helpers, and BigQuery table resolution.
 
 ---
 
@@ -354,4 +359,3 @@ Create a new file in `dot/checks/` subclassing `Check` and implementing `run() -
 
 - Claude AI integration for natural-language failure summaries
 - Slack / email alerting
-- `check: custom_sql` — run any SQL and assert on the result
