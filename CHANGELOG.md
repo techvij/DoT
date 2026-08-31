@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.0 — 2026-08-31
+
+### Added
+- **GitHub Actions CI** — pytest runs automatically on every push and every PR to `main` (Python 3.11, ubuntu-latest)
+- **`--output json` flag** — `python -m dot run --output json` emits a JSON array of all check results; pipe-friendly for `jq` or downstream tooling
+- **56 mock-connector tests** — all 10 check types covered with no database or cloud credentials required (`tests/test_checks.py`)
+- **CONTRIBUTING.md** — fork/PR workflow, steps for adding a new check or connector, code style guide
+
+### Fixed
+- Suppressed repetitive pandas SQLAlchemy compatibility warning in Postgres connector
+- Removed project-specific example table/column names; replaced with generic e-commerce equivalents
+- Docker demo thresholds tuned so the first run shows a realistic mix of pass/warn/fail
+
+---
+
 ## v0.1.0 — 2026-08-29
 
 First public release.
