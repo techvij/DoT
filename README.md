@@ -108,6 +108,10 @@ python -m dot run --config config/checks.yaml --table orders
 # Output results as JSON (pipe-friendly: jq, downstream tooling)
 python -m dot run --config config/checks.yaml --output json
 
+# Skip Claude summary or Slack alert for this run (local dev / debugging)
+python -m dot run --config config/checks.yaml --no-claude
+python -m dot run --config config/checks.yaml --no-slack
+
 # Custom log directory
 python -m dot run --config config/checks.yaml --log-dir /var/log/dot
 
@@ -334,6 +338,73 @@ Every run is persisted to SQLite (`dot_results.db` by default). This powers:
 
 ---
 
+## Claude AI diagnostic summary
+
+After checks complete, DoT can call the Anthropic API to produce a plain-English diagnosis of every failure and warning — what it likely means, the most probable cause, and the first thing to investigate.
+
+**Setup:**
+
+1. Add `ANTHROPIC_API_KEY=your_key` to `.env`
+2. Enable in `config/checks.yaml`:
+
+```yaml
+report:
+  claude:
+    enabled: true
+```
+
+**Terminal output (appended after the check table):**
+
+```
+── Claude Diagnosis ──────────────────────────────────────
+Overall: All 3 failures point to a stale partition load —
+         the nightly job likely timed out before completion.
+
+events.created_at [freshness / CRITICAL]
+  What it means: Last record is 20h old — downstream dashboards
+                 are showing yesterday's data as current.
+  Likely cause:  Nightly load DAG timed out before inserting
+                 today's partition.
+  Check first:   Airflow task log for events_load at last run time.
+
+Review the load job logs before triggering a manual backfill.
+──────────────────────────────────────────────────────────
+```
+
+One API call per run, never per check. Use `--no-claude` to skip for a specific run (e.g. local debugging) without changing config.
+
+---
+
+## Slack alerting
+
+Send a formatted Block Kit message to a Slack channel after each run, with the Claude diagnosis embedded per finding.
+
+**Setup:**
+
+1. Create an [Incoming Webhook](https://api.slack.com/messaging/webhooks) in Slack and add `SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...` to `.env`
+2. Enable in `config/checks.yaml`:
+
+```yaml
+report:
+  slack:
+    enabled: true
+    notify_on: warn_fail   # always | warn_fail (default) | fail_only
+```
+
+**`notify_on` options:**
+
+| Value | When Slack fires |
+|-------|-----------------|
+| `always` | Every run, even clean ones |
+| `warn_fail` | Only when at least one warn or fail (default) |
+| `fail_only` | Only when at least one failure |
+
+Use `--no-slack` to suppress for a specific run without changing config.
+
+If neither key is set, or both integrations are disabled, DoT runs exactly as it did before — no change to output or exit code.
+
+---
+
 ## Running tests
 
 ```bash
@@ -341,7 +412,7 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
-56 tests — no database or cloud credentials required. Covers all 10 check types (via mock connector), partition clause builder, connector dialect helpers, and BigQuery table resolution.
+85 tests — no database or cloud credentials required. Covers all 10 check types (via mock connector), partition clause builder, connector dialect helpers, BigQuery table resolution, the full report layer (Claude + Slack), and CLI regression tests for every major feature.
 
 ---
 
@@ -355,7 +426,8 @@ Create a new file in `dot/checks/` subclassing `Check` and implementing `run() -
 
 ---
 
-## What's next (Phase 2)
+## What's next
 
-- Claude AI integration for natural-language failure summaries
-- Slack / email alerting
+- Email alerting
+- JDBC / generic SQL connector
+- HTML / PDF run report export

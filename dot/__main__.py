@@ -4,8 +4,6 @@ import sys
 import click
 import yaml
 
-from dot.connectors.bigquery import BigQueryConnector
-from dot.connectors.postgres import PostgresConnector
 from dot.logger import setup_logger
 from dot.results.store import ResultsStore
 from dot.runner import CheckRunner
@@ -69,8 +67,10 @@ def _build_connector_from_cfg(cfg: dict):
     conn_cfg = cfg["connections"]["default"]
     connector_type = conn_cfg["type"]
     if connector_type == "postgres":
+        from dot.connectors.postgres import PostgresConnector
         connector = PostgresConnector(env_file=conn_cfg.get("env", ".env"))
     elif connector_type == "bigquery":
+        from dot.connectors.bigquery import BigQueryConnector
         connector = BigQueryConnector(conn_cfg)
     else:
         raise ValueError(f"Unknown connector type: '{connector_type}'")
@@ -84,14 +84,16 @@ def cli() -> None:
 
 
 @cli.command()
-@click.option("--config",   default="config/checks.yaml", show_default=True, help="Path to checks YAML config")
-@click.option("--table",    default=None,                                     help="Limit run to checks for this table only")
-@click.option("--db",       default="dot_results.db",     show_default=True, help="Path to SQLite results DB")
-@click.option("--log-dir",  default="logs",               show_default=True, help="Directory for log files")
-@click.option("--output",   default="text", type=click.Choice(["text", "json"], case_sensitive=False), show_default=True, help="Output format")
-def run(config: str, table: str | None, db: str, log_dir: str, output: str) -> None:
+@click.option("--config",    default="config/checks.yaml", show_default=True, help="Path to checks YAML config")
+@click.option("--table",     default=None,                                     help="Limit run to checks for this table only")
+@click.option("--db",        default="dot_results.db",     show_default=True, help="Path to SQLite results DB")
+@click.option("--log-dir",   default="logs",               show_default=True, help="Directory for log files")
+@click.option("--output",    default="text", type=click.Choice(["text", "json"], case_sensitive=False), show_default=True, help="Output format")
+@click.option("--no-claude", "skip_claude", is_flag=True, help="Skip Claude summary even if enabled in config")
+@click.option("--no-slack",  "skip_slack",  is_flag=True, help="Skip Slack alert even if enabled in config")
+def run(config: str, table: str | None, db: str, log_dir: str, output: str, skip_claude: bool, skip_slack: bool) -> None:
     """Run all configured checks and print results."""
-    logger, log_file = setup_logger(log_dir=log_dir)
+    run_logger, log_file = setup_logger(log_dir=log_dir)
 
     if output != "json":
         click.echo(f"Running DoT checks ({config})...")
@@ -113,11 +115,31 @@ def run(config: str, table: str | None, db: str, log_dir: str, output: str) -> N
     errored = sum(1 for r in results if r.status == "error")
 
     print()
-    summary = f"{len(results)} checks run — {passed} passed, {warned} warned, {failed} failed"
+    run_summary = f"{len(results)} checks run — {passed} passed, {warned} warned, {failed} failed"
     if errored:
-        summary += f", {errored} errored"
-    print(summary)
+        run_summary += f", {errored} errored"
+    print(run_summary)
     print(f"Log: {log_file}")
+
+    # ── Report layer (Claude + Slack) ────────────────────────────────────
+    report_cfg = runner.config.get("report", {})
+    source_name = runner.config.get("connections", {}).get("default", {}).get("type", "default")
+
+    claude_summary = None
+    if not skip_claude and report_cfg.get("claude", {}).get("enabled"):
+        try:
+            from dot.report.claude_summary import generate_claude_summary, print_claude_summary
+            claude_summary = generate_claude_summary(results, source_name)
+            print_claude_summary(claude_summary)
+        except Exception as exc:
+            run_logger.warning(f"Claude summary failed: {exc}", exc_info=True)
+
+    if not skip_slack and report_cfg.get("slack", {}).get("enabled"):
+        try:
+            from dot.report.slack_alert import send_slack_alert
+            send_slack_alert(results, claude_summary, report_cfg.get("slack", {}), source_name)
+        except Exception as exc:
+            run_logger.warning(f"Slack alert failed: {exc}", exc_info=True)
 
 
 @cli.group()

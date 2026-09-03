@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.3.0 — 2026-09-03
+
+### Added
+- **Claude API integration** — AI-generated plain-English diagnostic summary after each run (`claude-sonnet-4-6`, single API call per run, JSON-structured output with `overall_status`, per-finding `plain_english` / `likely_cause` / `investigate_first`, and `next_run_action`)
+- **Slack alerting** — Block Kit formatted webhook messages; Claude diagnosis embedded per finding; configurable `notify_on: always | warn_fail | fail_only`
+- **`dot/report/` layer** — `formatter.py` (shared utilities), `claude_summary.py`, `slack_alert.py`
+- **`--no-claude` and `--no-slack` CLI flags** — skip report integrations for local dev runs without firing alerts
+- **`ANTHROPIC_API_KEY` and `SLACK_WEBHOOK_URL`** added to `.env.example`; both fully optional — DoT runs identically if neither is set
+- **29 new tests** across two new test files (85 total):
+  - `tests/test_report.py` — 13 mock-based tests for formatter, Claude summary, and Slack alert
+  - `tests/test_regression.py` — 16 CLI-level regression tests verifying Phase 1 and Phase 2 behaviour via CliRunner; every significant feature now has a guard test
+
+### Changed
+- `requirements.txt` — added `requests>=2.31.0,<3` and `anthropic>=0.34.0,<1`
+- `dot/runner.py` and `dot/__main__.py` — connector imports made lazy (moved inside `_build_connector`); importing the module no longer requires `psycopg2` or `google-cloud-bigquery` to be installed, which also makes test collection faster in environments without those drivers
+
+---
+
 ## v0.2.0 — 2026-08-31
 
 ### Added

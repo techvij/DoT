@@ -50,6 +50,17 @@ See `dot/checks/cardinality.py` for a minimal example.
 3. Wire it in the `_build_connector_from_cfg()` helper in `dot/__main__.py` and `dot/runner.py`
 4. Add a connection example to `config/checks.yaml` and `README.md`
 
+## Adding a new report integration
+
+The `dot/report/` layer runs after all checks complete and has no effect on check results or exit code. A new integration (e.g. email, PagerDuty) follows the same pattern as `slack_alert.py`:
+
+1. Create `dot/report/your_integration.py` — import from `formatter.py`, read config from env vars
+2. Call it from the report block in `dot/__main__.py`, wrapped in `try/except`
+3. Add a `--no-<name>` flag to the `run` command if skipping per-run is useful
+4. Add at least one mock-based test in `tests/test_report.py`
+
+A report failure must never fail the check run — the `try/except` in `__main__.py` guarantees this for the integrations already there; do the same for any new one.
+
 ## Code style
 
 - No external formatter required — just keep it readable

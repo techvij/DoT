@@ -3,6 +3,16 @@ connections:
     type: postgres
     env: .env
 
+# Optional report layer — add ANTHROPIC_API_KEY and/or SLACK_WEBHOOK_URL to .env to use.
+# Remove the '#' from the lines you want to activate.
+#
+# report:
+#   claude:
+#     enabled: true          # AI diagnostic summary after each run
+#   slack:
+#     enabled: true
+#     notify_on: warn_fail   # always | warn_fail (default) | fail_only
+
 checks:
   - table: orders
     column: status
