@@ -8,10 +8,13 @@
 - **`dot/report/` layer** — `formatter.py` (shared utilities), `claude_summary.py`, `slack_alert.py`
 - **`--no-claude` and `--no-slack` CLI flags** — skip report integrations for local dev runs without firing alerts
 - **`ANTHROPIC_API_KEY` and `SLACK_WEBHOOK_URL`** added to `.env.example`; both fully optional — DoT runs identically if neither is set
-- **13 new tests** in `tests/test_report.py` — all mock-based, no real API calls or network
+- **29 new tests** across two new test files (85 total):
+  - `tests/test_report.py` — 13 mock-based tests for formatter, Claude summary, and Slack alert
+  - `tests/test_regression.py` — 16 CLI-level regression tests verifying Phase 1 and Phase 2 behaviour via CliRunner; every significant feature now has a guard test
 
 ### Changed
 - `requirements.txt` — added `requests>=2.31.0,<3` and `anthropic>=0.34.0,<1`
+- `dot/runner.py` and `dot/__main__.py` — connector imports made lazy (moved inside `_build_connector`); importing the module no longer requires `psycopg2` or `google-cloud-bigquery` to be installed, which also makes test collection faster in environments without those drivers
 
 ---
 
