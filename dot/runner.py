@@ -15,8 +15,6 @@ from dot.checks.regex_check import RegexCheck
 from dot.checks.row_count import RowCountCheck
 from dot.checks.schema_drift import SchemaDriftCheck
 from dot.checks.value_range import ValueRangeCheck
-from dot.connectors.bigquery import BigQueryConnector
-from dot.connectors.postgres import PostgresConnector
 from dot.results.store import ResultsStore
 
 logger = logging.getLogger("dot")
@@ -48,8 +46,10 @@ class CheckRunner:
         conn_cfg = self.config["connections"]["default"]
         connector_type = conn_cfg["type"]
         if connector_type == "postgres":
+            from dot.connectors.postgres import PostgresConnector
             connector = PostgresConnector(env_file=conn_cfg.get("env", ".env"))
         elif connector_type == "bigquery":
+            from dot.connectors.bigquery import BigQueryConnector
             connector = BigQueryConnector(conn_cfg)
         else:
             raise ValueError(f"Unknown connector type: '{connector_type}'")

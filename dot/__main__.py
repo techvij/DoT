@@ -4,8 +4,6 @@ import sys
 import click
 import yaml
 
-from dot.connectors.bigquery import BigQueryConnector
-from dot.connectors.postgres import PostgresConnector
 from dot.logger import setup_logger
 from dot.results.store import ResultsStore
 from dot.runner import CheckRunner
@@ -69,8 +67,10 @@ def _build_connector_from_cfg(cfg: dict):
     conn_cfg = cfg["connections"]["default"]
     connector_type = conn_cfg["type"]
     if connector_type == "postgres":
+        from dot.connectors.postgres import PostgresConnector
         connector = PostgresConnector(env_file=conn_cfg.get("env", ".env"))
     elif connector_type == "bigquery":
+        from dot.connectors.bigquery import BigQueryConnector
         connector = BigQueryConnector(conn_cfg)
     else:
         raise ValueError(f"Unknown connector type: '{connector_type}'")
